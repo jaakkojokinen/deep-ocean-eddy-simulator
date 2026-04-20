@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deep Ocean Eddy Simulator</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #050505; /* Darker background for deep sea vibes */
+        color: #eee;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      #ui-overlay {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #44ccff;
+      }
+
+      p {
+        margin: 5px 0;
+        font-size: 0.9rem;
+        opacity: 0.8;
+      }
+
+      /* Container for the Three.js canvas */
+      #canvas-container {
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ui-overlay">
+      <h1>Ocean Eddy Dynamics</h1>
+      <p>3D Visualization of Mesoscale Turbulence & Eddy Mergers</p>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
