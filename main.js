@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GUI } from 'lil-gui';
 import { EddyPhysics } from './physics.js';
+import { ShrimpSwarm } from './shrimp.js';
 
 // --- CONFIGURATION ---
 const SIZE = 128; // Must be power of 2
@@ -8,11 +9,14 @@ const params = {
   viscosity: 0.001,
   dt: 0.05,           
   colorContrast: 50.0, 
-  reset: () => sim.initVorticity()
+  reset: () => sim.initVorticity(),
+  showShrimp: true
 };
 
 // --- SCENE SETUP ---
 const scene = new THREE.Scene();
+
+const swarm = new ShrimpSwarm(scene, 1000);
 
 // Orthographic camera is best for 2D fluid "maps"
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -85,6 +89,7 @@ gui.add(params, 'dt', 0.001, 0.2).name('Time Step');
 gui.add(params, 'colorContrast', 1.0, 100.0).name('Contrast');
 gui.add(params, 'colorContrast', 0.1, 10.0).name('Vortex Depth');
 gui.add(params, 'reset').name('Re-seed Ocean');
+gui.add(params, 'showShrimp').name('Cursed Shrimp').onChange(val => swarm.toggle(val));
 
 // --- ANIMATION LOOP ---
 function animate() {
@@ -123,6 +128,9 @@ function animate() {
   geometry.attributes.color.needsUpdate = true;
   geometry.computeVertexNormals();
 
+  // Move the shrimp!
+  swarm.update(sim, geometry.attributes.position.array);
+
   renderer.render(scene, camera);
 }
 
@@ -133,3 +141,21 @@ window.addEventListener('resize', () => {
 
 // Launch!
 animate();
+
+// const stream = renderer.domElement.captureStream(60); // 60 FPS
+// const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+// const chunks = [];
+
+// recorder.ondataavailable = e => chunks.push(e.data);
+// recorder.onstop = () => {
+//   const blob = new Blob(chunks, { type: 'video/webm' });
+//   const url = URL.createObjectURL(blob);
+//   const a = document.createElement('a');
+//   a.href = url;
+//   a.download = 'eddies.webm';
+//   a.click();
+// };
+
+// // Start recording for 5 seconds
+// recorder.start();
+// setTimeout(() => recorder.stop(), 5000);
