@@ -10,99 +10,73 @@ const params = {
   viscosity: 0.001,
   dt: 0.05,           
   colorContrast: 50.0, 
+  vortexDepth: 0.1,    // Added separate parameter for vertical scale
   reset: () => sim.initVorticity(),
   showShrimp: true
 };
 
 // --- SCENE SETUP ---
 const scene = new THREE.Scene();
-
-const swarm = new ShrimpSwarm(scene, 1000);
-
-// Orthographic camera is best for 2D fluid "maps"
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 50, 100);
-camera.lookAt(0, 0, 0);
-window.camera = camera;
+scene.background = new THREE.Color(0x00050a); // Deepest ocean black-blue
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-const controls = new OrbitControls(camera, renderer.domElement);
+// --- CAMERA & CONTROLS ---
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 60, 80);
+camera.lookAt(0, 0, 0);
 
-// Optional: Add some "juice" to the movement
+const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; 
 controls.dampingFactor = 0.05;
-controls.screenSpacePanning = false;
-
-// Limit the zoom so you don't go through the floor or into space
-controls.minDistance = 10;
-controls.maxDistance = 300;
-
-// Limit vertical rotation so the user doesn't flip the ocean upside down
-controls.maxPolarAngle = Math.PI / 2.1;
+controls.maxPolarAngle = Math.PI / 2.1; // Prevent going under the floor
+controls.minDistance = 20;
+controls.maxDistance = 250;
 
 // --- PHYSICS INITIALIZATION ---
 const sim = new EddyPhysics(SIZE, params.viscosity, params.dt);
-window.sim = sim; 
-window.params = params;
-sim.dt = params.dt;
-sim.viscosity = params.viscosity;
-sim.windStrength = params.windStrength || 0.005; // Connect to GUI
+// Note: sim is initialized with params, but needs onChange to update live
 
-// --- SHADER SETUP ---
-const material = new THREE.MeshPhongMaterial({
-  color: 0x0044ff,       // Base blue
-  emissive: 0x001133,    // Dark blue glow so shadows aren't pitch black
-  specular: 0x112244,
-  shininess: 50,
-  flatShading: true,
-  side: THREE.DoubleSide
-});
+// --- ACTORS ---
+const swarm = new ShrimpSwarm(scene, 300);
 
-const light = new THREE.DirectionalLight(0xffffff, 1.5);
-light.position.set(10, 50, 10);
-scene.add(light);
-scene.add(new THREE.AmbientLight(0x404040));
-window.light = light;
-
+// --- OCEAN MESH SETUP ---
 const geometry = new THREE.PlaneGeometry(100, 100, SIZE - 1, SIZE - 1);
 geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(SIZE * SIZE * 3), 3));
-material.vertexColors = true; // Ensure your material has this enabled
-window.geometry = geometry;
+
+const material = new THREE.MeshPhongMaterial({
+  color: 0xffffff,       // Base white to allow vertex colors to shine
+  specular: 0x112244,
+  shininess: 80,
+  flatShading: true,
+  side: THREE.DoubleSide,
+  vertexColors: true     // Required for the dynamic color mapping
+});
 
 const mesh = new THREE.Mesh(geometry, material);
 mesh.rotation.x = -Math.PI / 2;
-window.mesh = mesh;
 scene.add(mesh);
 
-// --- DATA TEXTURE SETUP ---
-// This array holds the raw physics values to be sent to the GPU
-const dataArray = new Float32Array(SIZE * SIZE);
-const texture = new THREE.DataTexture(
-  dataArray, 
-  SIZE, 
-  SIZE, 
-  THREE.RedFormat, 
-  THREE.FloatType
-);
-texture.unpackAlignment = 1;
-
-// Critical settings for floating point data textures
-texture.minFilter = THREE.NearestFilter;
-texture.magFilter = THREE.NearestFilter;
-texture.generateMipmaps = false;
-texture.flipY = false;
-texture.internalFormat = 'R32F'; 
-texture.needsUpdate = true;
+// --- LIGHTING ---
+const light = new THREE.DirectionalLight(0xffffff, 2.0);
+light.position.set(10, 50, 10);
+scene.add(light);
+scene.add(new THREE.AmbientLight(0x102040));
 
 // --- GUI ---
 const gui = new GUI();
-gui.add(params, 'viscosity', 0, 0.005).name('Viscosity');
-gui.add(params, 'dt', 0.001, 0.2).name('Time Step');
+// Use .onChange to pipe values back into the physics engine
+gui.add(params, 'viscosity', 0, 0.005).name('Viscosity').onChange(val => {
+  sim.viscosity = val;
+});
+gui.add(params, 'dt', 0.001, 0.2).name('Time Step').onChange(val => {
+  sim.dt = val;
+});
 gui.add(params, 'colorContrast', 1.0, 100.0).name('Contrast');
-gui.add(params, 'colorContrast', 0.1, 10.0).name('Vortex Depth');
+gui.add(params, 'vortexDepth', 0.01, 0.5).name('Vortex Depth');
 gui.add(params, 'reset').name('Re-seed Ocean');
 gui.add(params, 'showShrimp').name('Cursed Shrimp').onChange(val => swarm.toggle(val));
 
@@ -110,10 +84,10 @@ gui.add(params, 'showShrimp').name('Cursed Shrimp').onChange(val => swarm.toggle
 function animate() {
   requestAnimationFrame(animate);
 
-  // Update controls
+  // 1. Update Camera
   controls.update();
 
-  // 1. Physics Step
+  // 2. Physics Step
   sim.step();
 
   const count = geometry.attributes.position.count;
@@ -121,32 +95,26 @@ function animate() {
   const colors = geometry.attributes.color.array;
 
   for (let i = 0; i < count; i++) {
-    // Safety: Ensure we map 1-to-1 with the physics grid
     const val = sim.vorticity[i * 2];
     const absVal = Math.abs(val);
 
     // --- 3D DISPLACEMENT ---
-    // Reduced intensity (0.1 multiplier) to prevent "Skyscrapers"
-    // We use the Z-axis (index * 3 + 2) because it's a PlaneGeometry
-    positions[i * 3 + 2] = val * (params.colorContrast * 0.1);
+    // Now using the vortexDepth param for easy sedation/amplification
+    positions[i * 3 + 2] = val * (params.colorContrast * params.vortexDepth);
 
     // --- DYNAMIC COLORING ---
-    // This makes the 'spin' visible even in deep shadow
     const r = i * 3;
-    
-    // Base: Deep Navy Blue
-    // Highlight: Neon Cyan / Electric Blue based on spin speed
-    colors[r]     = 0.05 + absVal * 0.1; // Slight purple in high spin
-    colors[r + 1] = 0.2 + absVal * 0.6;  // Bright Green/Cyan component
-    colors[r + 2] = 0.5 + absVal * 0.4;  // Solid Blue base
+    colors[r]     = 0.02 + absVal * 0.15; // R
+    colors[r + 1] = 0.1 + absVal * 0.5;   // G
+    colors[r + 2] = 0.4 + absVal * 0.3;   // B
   }
 
-  // Mandatory updates for Three.js to see the changes
+  // Necessary updates for Three.js
   geometry.attributes.position.needsUpdate = true;
   geometry.attributes.color.needsUpdate = true;
   geometry.computeVertexNormals();
 
-  // Move the shrimp!
+  // 3. Move the Shrimp
   swarm.update(sim, geometry.attributes.position.array);
 
   renderer.render(scene, camera);
@@ -154,26 +122,10 @@ function animate() {
 
 // Handle window resizing
 window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
 // Launch!
 animate();
-
-// const stream = renderer.domElement.captureStream(60); // 60 FPS
-// const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-// const chunks = [];
-
-// recorder.ondataavailable = e => chunks.push(e.data);
-// recorder.onstop = () => {
-//   const blob = new Blob(chunks, { type: 'video/webm' });
-//   const url = URL.createObjectURL(blob);
-//   const a = document.createElement('a');
-//   a.href = url;
-//   a.download = 'eddies.webm';
-//   a.click();
-// };
-
-// // Start recording for 5 seconds
-// recorder.start();
-// setTimeout(() => recorder.stop(), 5000);

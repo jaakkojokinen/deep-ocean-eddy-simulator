@@ -5,12 +5,9 @@ export class ShrimpSwarm {
     this.count = count;
     this.shrimpArray = [];
     
-    // 1. Load the Texture
     const loader = new THREE.TextureLoader();
-    // Ensure the path matches where you saved your shrimp image!
     this.shrimpTexture = loader.load('assets/shrimp.png'); 
     
-    // Keep pixels sharp (No blurry shrimp!)
     this.shrimpTexture.magFilter = THREE.NearestFilter;
     this.shrimpTexture.minFilter = THREE.NearestFilter;
 
@@ -18,50 +15,57 @@ export class ShrimpSwarm {
   }
 
   init(scene) {
-    // 2. Create a shared material for all shrimp
     const material = new THREE.SpriteMaterial({
       map: this.shrimpTexture,
       transparent: true,
       depthTest: true,
-      depthWrite: false, // Makes them overlap in a 'cursed' cluster way
+      depthWrite: false, 
       opacity: 0.9
     });
 
     for (let i = 0; i < this.count; i++) {
+      // Cloning material so each can have its own opacity
       const sprite = new THREE.Sprite(material.clone());
       this.resetShrimp(sprite);
-      sprite.visible = true; // Force visibility on init
+      sprite.visible = true; 
       scene.add(sprite);
       this.shrimpArray.push(sprite);
     }
   }
 
-  // Helper to re-spawn a shrimp at a random location
   resetShrimp(sprite) {
+    // Randomize position
     sprite.position.x = (Math.random() - 0.5) * 100;
     sprite.position.z = (Math.random() - 0.5) * 100;
     
-    // Crank the size up! If the PNG has whitespace, 1.5 is too small.
-    // Let's try a range of 5 to 8.
-    const s = 2.0 + Math.random() * 1.5; 
+    // Scale
+    const s = 1.8 + Math.random() * 1.2; 
     sprite.scale.set(s, s, 1);
-    sprite.material.opacity = 0.4 + (s / 3.5) * 0.6; // Smaller ones are more "ghostly"
-    sprite.userData.grip = 0.005 + Math.random() * 0.015;
+    
+    // Opacity based on scale
+    sprite.material.opacity = 0.5 + (s / 3.0) * 0.4;
+
+    // --- NEW INERTIA LOGIC ---
+    // 90% of shrimp have very low grip (they flow immediately)
+    // 10% are 'stubborn' and stay static until hit by a strong vortex
+    if (Math.random() > 0.1) {
+      sprite.userData.grip = 0.001; // Easy flow
+    } else {
+      sprite.userData.grip = 0.03;  // Stubborn/Static
+    }
   }
 
   update(sim, oceanPositions) {
-    // Only update if the first shrimp is visible (GUI toggle check)
-    if (!this.shrimpArray[0].visible) return;
+    if (this.shrimpArray.length === 0 || !this.shrimpArray[0].visible) return;
 
     const SIZE = sim.size;
 
     for (let i = 0; i < this.count; i++) {
-      if (this.shrimpArray.length === 0 || !this.shrimpArray[0].visible) return;
       const sprite = this.shrimpArray[i];
 
-      // --- 1. RANDOM DISAPPEARANCE ---
-      // 0.1% chance per frame to vanish and re-appear elsewhere
-      if (Math.random() < 0.0005) {
+      // --- 1. SLOWER RANDOM RE-SPAWN ---
+      // Keeping them on screen longer so they can complete a journey
+      if (Math.random() < 0.0003) {
         this.resetShrimp(sprite);
       }
 
@@ -69,35 +73,28 @@ export class ShrimpSwarm {
       let gx = Math.floor(((sprite.position.x + 50) / 100) * SIZE);
       let gz = Math.floor(((sprite.position.z + 50) / 100) * SIZE);
       
-      // Wrap indices for safety
       gx = (gx + SIZE) % SIZE;
       gz = (gz + SIZE) % SIZE;
       
       const idx = (gz * SIZE + gx) * 2;
       const u = sim.uSp ? sim.uSp[idx] : 0;
       const v = sim.vSp ? sim.vSp[idx] : 0;
-      
-      // Calculate local current speed
       const currentSpeed = Math.sqrt(u * u + v * v);
 
-      // --- 3. THE 'INERTIA' LOGIC ---
-      // Shrimp only moves if the water is moving faster than its 'grip'
+      // --- 3. MOVEMENT ---
       if (currentSpeed > sprite.userData.grip) {
-        // Lower this number to make them drift smoothly
         sprite.position.x += u * 0.25; 
         sprite.position.z += v * 0.25; 
       }
 
       // --- 4. EDGE CHECK ---
-      // If they drift off the map, re-spawn them randomly
+      // Wrap-around or Reset? Let's use Reset for a more 'migration' feel
       if (Math.abs(sprite.position.x) > 52 || Math.abs(sprite.position.z) > 52) {
         this.resetShrimp(sprite);
       }
 
       // --- 5. VERTICAL POSITIONING ---
-      // Match the 3D 'dent' of the ocean surface
       const meshIdx = (gz * SIZE + gx) * 3;
-      // We add +1.0 so they hover slightly above the mesh surface
       sprite.position.y = oceanPositions[meshIdx + 2] + 1.0;
     }
   }
