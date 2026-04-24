@@ -3,6 +3,7 @@ import { GUI } from 'lil-gui';
 import { EddyPhysics } from './physics.js';
 import { ShrimpSwarm } from './shrimp.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GiantSquid } from './squid.js';
 
 // --- CONFIGURATION ---
 const SIZE = 128; // Must be power of 2
@@ -12,7 +13,8 @@ const params = {
   colorContrast: 50.0, 
   vortexDepth: 0.1,    // Added separate parameter for vertical scale
   reset: () => sim.initVorticity(),
-  showShrimp: true
+  showShrimp: true,
+  showSquid: true,
 };
 
 // --- SCENE SETUP ---
@@ -42,6 +44,8 @@ const sim = new EddyPhysics(SIZE, params.viscosity, params.dt);
 
 // --- ACTORS ---
 const swarm = new ShrimpSwarm(scene, 600);
+
+const squid = new GiantSquid(scene);
 
 // --- OCEAN MESH SETUP ---
 const geometry = new THREE.PlaneGeometry(100, 100, SIZE - 1, SIZE - 1);
@@ -79,6 +83,7 @@ gui.add(params, 'colorContrast', 1.0, 100.0).name('Contrast');
 gui.add(params, 'vortexDepth', 0.01, 0.5).name('Vortex Depth');
 gui.add(params, 'reset').name('Re-seed Ocean');
 gui.add(params, 'showShrimp').name('Cursed Shrimp').onChange(val => swarm.toggle(val));
+gui.add(params, 'showSquid').name('Rare Squid Sighting');
 
 // --- ANIMATION LOOP ---
 function animate() {
@@ -116,6 +121,8 @@ function animate() {
 
   // 3. Move the Shrimp
   swarm.update(sim, positions);
+
+  squid.update(sim, positions, params.showSquid);
 
   renderer.render(scene, camera);
 }

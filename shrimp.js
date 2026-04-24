@@ -106,11 +106,11 @@ export class ShrimpSwarm {
       sprite.position.z += (v * sim.dt * flowIntensity) + jitter;
 
       // Calculate how fast they are 'pogoing'
-const verticalVelocity = sprite.position.y - (uData.lastY || 0);
-uData.lastY = sprite.position.y;
+      const verticalVelocity = sprite.position.y - (uData.lastY || 0);
+      uData.lastY = sprite.position.y;
 
-// Spin the sprite based on how fast it's being launched or dropped
-sprite.material.rotation += verticalVelocity * 0.5;
+      // Spin the sprite based on how fast it's being launched or dropped
+      sprite.material.rotation += verticalVelocity * 0.5;
       
       // Fade out based on age
       sprite.material.opacity = Math.min(0.9, 1.0 - (uData.age / uData.maxAge));
