@@ -41,7 +41,7 @@ const sim = new EddyPhysics(SIZE, params.viscosity, params.dt);
 // Note: sim is initialized with params, but needs onChange to update live
 
 // --- ACTORS ---
-const swarm = new ShrimpSwarm(scene, 300);
+const swarm = new ShrimpSwarm(scene, 600);
 
 // --- OCEAN MESH SETUP ---
 const geometry = new THREE.PlaneGeometry(100, 100, SIZE - 1, SIZE - 1);
@@ -115,7 +115,7 @@ function animate() {
   geometry.computeVertexNormals();
 
   // 3. Move the Shrimp
-  swarm.update(sim, geometry.attributes.position.array);
+  swarm.update(sim, positions);
 
   renderer.render(scene, camera);
 }
@@ -129,3 +129,20 @@ window.addEventListener('resize', () => {
 
 // Launch!
 animate();
+
+// const stream = renderer.domElement.captureStream(60); // 60 FPS
+// const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+// const chunks = [];
+
+// recorder.ondataavailable = e => chunks.push(e.data);
+// recorder.onstop = () => {
+//   const blob = new Blob(chunks, { type: 'video/webm' });
+//   const url = URL.createObjectURL(blob);
+//   const a = document.createElement('a');
+//   a.href = url;
+//   a.download = 'eddies.webm';
+//   a.click();
+// };
+
+// // Start recording for 5 seconds
+// recorder.start();
