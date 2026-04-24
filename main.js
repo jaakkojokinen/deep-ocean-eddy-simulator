@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GUI } from 'lil-gui';
 import { EddyPhysics } from './physics.js';
 import { ShrimpSwarm } from './shrimp.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 // --- CONFIGURATION ---
 const SIZE = 128; // Must be power of 2
@@ -27,6 +28,20 @@ window.camera = camera;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+
+// Optional: Add some "juice" to the movement
+controls.enableDamping = true; 
+controls.dampingFactor = 0.05;
+controls.screenSpacePanning = false;
+
+// Limit the zoom so you don't go through the floor or into space
+controls.minDistance = 10;
+controls.maxDistance = 300;
+
+// Limit vertical rotation so the user doesn't flip the ocean upside down
+controls.maxPolarAngle = Math.PI / 2.1;
 
 // --- PHYSICS INITIALIZATION ---
 const sim = new EddyPhysics(SIZE, params.viscosity, params.dt);
@@ -94,6 +109,9 @@ gui.add(params, 'showShrimp').name('Cursed Shrimp').onChange(val => swarm.toggle
 // --- ANIMATION LOOP ---
 function animate() {
   requestAnimationFrame(animate);
+
+  // Update controls
+  controls.update();
 
   // 1. Physics Step
   sim.step();

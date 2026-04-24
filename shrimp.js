@@ -8,7 +8,7 @@ export class ShrimpSwarm {
     // 1. Load the Texture
     const loader = new THREE.TextureLoader();
     // Ensure the path matches where you saved your shrimp image!
-    this.shrimpTexture = loader.load('./assets/shrimp.png'); 
+    this.shrimpTexture = loader.load('assets/shrimp.png'); 
     
     // Keep pixels sharp (No blurry shrimp!)
     this.shrimpTexture.magFilter = THREE.NearestFilter;
