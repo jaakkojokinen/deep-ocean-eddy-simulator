@@ -120,7 +120,7 @@ function animate() {
   geometry.computeVertexNormals();
 
   // 3. Move the Shrimp
-  swarm.update(sim, positions);
+  swarm.update(sim, positions, params.showShrimp);
 
   squid.update(sim, positions, params.showSquid);
 

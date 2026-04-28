@@ -41,8 +41,21 @@ export class ShrimpSwarm {
     this.shrimpArray.push(sprite);
   }
 
-  update(sim, oceanPositions) {
+  update(sim, oceanPositions, enabled) {
     if (!this.baseMaterial) return;
+
+    // THE MISSING GUARD: If disabled, hide all and stop logic
+    if (!enabled) {
+      if (this.shrimpArray.length > 0 && this.shrimpArray[0].visible) {
+        this.shrimpArray.forEach(s => s.visible = false);
+      }
+      return;
+    }
+    
+    // Ensure they are visible if enabled
+    if (this.shrimpArray.length > 0 && !this.shrimpArray[0].visible) {
+      this.shrimpArray.forEach(s => s.visible = true);
+    }
 
     const SIZE = sim.size;
     // We match the physics speedScale (20.0) and add a little 'kick'

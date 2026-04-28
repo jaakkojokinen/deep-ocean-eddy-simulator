@@ -37,12 +37,33 @@ export class GiantSquid {
   }
 
   update(sim, oceanPositions, enabled) {
+    
     // 1. Rarity Logic: 0.01% chance to spawn if enabled and not currently active
     if (enabled && !this.active && Math.random() < 0.0005) {
       this.spawn();
     }
 
+
     if (!this.active || !this.sprite) return;
+
+    if (!enabled) {
+      if (this.active && this.sprite) {
+        this.scene.remove(this.sprite);
+        this.active = false;
+        this.sprite = null;
+      }
+      return;
+    }
+
+    // 1. Rarity Logic: Only spawn if enabled
+    if (!this.active && Math.random() < 0.0005) {
+      this.spawn();
+    }
+
+    // 1. Rarity Logic: Only spawn if enabled
+    if (!this.active && Math.random() < 0.0005) {
+      this.spawn();
+    }
 
     const SIZE = sim.size;
     const speedMultiplier = 10.0; // Slower than shrimp, it has mass
