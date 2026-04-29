@@ -1,6 +1,6 @@
 {
-  "name": "MyWebSite",
-  "short_name": "MySite",
+  "name": "deep-ocean-eddy-simulator",
+  "short_name": "Eddy Simulator",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
