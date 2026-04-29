@@ -4,6 +4,10 @@ import { EddyPhysics } from './physics.js';
 import { ShrimpSwarm } from './shrimp.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GiantSquid } from './squid.js';
+import { inject } from '@vercel/analytics';
+import { track } from '@vercel/analytics';
+
+inject();
 
 // --- CONFIGURATION ---
 const SIZE = 128; // Must be power of 2
@@ -84,6 +88,7 @@ gui.add(params, 'vortexDepth', 0.01, 0.5).name('Vortex Depth');
 gui.add(params, 'reset').name('Re-seed Ocean');
 gui.add(params, 'showShrimp').name('Cursed Shrimp').onChange(val => swarm.toggle(val));
 gui.add(params, 'showSquid').name('Rare Squid Sighting');
+
 
 // --- ANIMATION LOOP ---
 function animate() {

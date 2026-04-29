@@ -9,9 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "three": "^0.160.0",
+    "@vercel/analytics": "^2.0.1",
     "fft.js": "^4.0.4",
-    "lil-gui": "^0.19.1"
+    "lil-gui": "^0.19.1",
+    "three": "^0.160.0"
   },
   "devDependencies": {
     "vite": "^5.0.0"
